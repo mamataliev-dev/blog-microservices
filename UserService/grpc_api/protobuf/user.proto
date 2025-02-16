@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package user;
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetCollectionUsers(GetCollectionUsersRequest) returns (GetCollectionUsersResponse);
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+}
+
+message User {
+  int32 id = 1;
+  string name = 2;
+  string about = 3;
+  string nickname = 4;
+  int32 followers = 5;
+  int32 following = 6;
+  string member_since = 7;
+  string profile_img_url = 8;
+}
+
+message GetUserRequest {
+  string nickname = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message GetCollectionUsersRequest {}
+
+message GetCollectionUsersResponse {
+  repeated User users = 1;
+}
+
+message CreateUserRequest {
+  string name = 1;
+  string about = 2;
+  string nickname = 3;
+  string profile_img_url = 4;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  string name = 1;
+  string about = 2;
+  string nickname = 3;
+  string profile_img_url = 4;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}
+
+message DeleteUserRequest {
+  string nickname = 1;
+}
+
+message DeleteUserResponse {
+  string status = 1;
+  string message = 2;
+}
