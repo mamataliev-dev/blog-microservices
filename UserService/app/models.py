@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from extensions import db
+from app.extensions import db
 
 
 class User(db.Model):
@@ -25,7 +25,6 @@ class User(db.Model):
     profile_img_url = db.Column(db.Text, default="https://s3.amazonaws.com/default_profile.jpg")
     member_since = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Define relationships for followers and following
     followers = db.relationship(
         "Follower",
         foreign_keys="[Follower.user_id]",
