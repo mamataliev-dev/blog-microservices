@@ -1,1 +1,1 @@
-from app.api.resources.user import UserResource, UserListResource
+from app.api.resources.user import UserResource, UserListResource, UserResourceById

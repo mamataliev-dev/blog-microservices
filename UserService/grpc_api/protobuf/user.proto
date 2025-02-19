@@ -47,10 +47,11 @@ message CreateUserResponse {
 }
 
 message UpdateUserRequest {
-  string name = 1;
-  string about = 2;
-  string nickname = 3;
-  string profile_img_url = 4;
+  int32 id = 1;
+  string name = 2;
+  string about = 3;
+  string nickname = 4;
+  string profile_img_url = 5;
 }
 
 message UpdateUserResponse {

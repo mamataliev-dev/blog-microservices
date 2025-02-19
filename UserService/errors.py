@@ -19,8 +19,7 @@ class GrpcError(Enum):
     USER_NOT_FOUND = (grpc.StatusCode.NOT_FOUND, "User not found")
     INVALID_ARGUMENT = (grpc.StatusCode.INVALID_ARGUMENT, "Invalid request parameters")
     INTERNAL_SERVER_ERROR = (grpc.StatusCode.INTERNAL, "An internal server error occurred")
-    PERMISSION_DENIED = (grpc.StatusCode.PERMISSION_DENIED, "You do not have permission to perform this action")
-    ALREADY_EXISTS = (grpc.StatusCode.ALREADY_EXISTS, "Resource already exists")
+    ALREADY_EXISTS = (grpc.StatusCode.ALREADY_EXISTS, "User already exists")
     DATABASE_ERROR = (grpc.StatusCode.INTERNAL, "Database error: {}")
     INTERNAL = (grpc.StatusCode.INTERNAL, "Internal server error: {}")
 
@@ -47,13 +46,17 @@ class HttpError(Enum):
     - Access the `code` and `message` attributes to construct error responses.
     """
     OK = (200, "OK")
-    NOT_FOUND = (404, "Resource not found")
+    NOT_FOUND = (404, "User not found")
     BAD_REQUEST = (400, "Invalid request parameters")
     INTERNAL_SERVER_ERROR = (500, "An internal server error occurred: {}")
     FORBIDDEN = (403, "You do not have permission to perform this action")
-    CONFLICT = (409, "Resource already exists")
+    CONFLICT = (409, "User already exists")
     DATABASE_ERROR = (500, "Database error: {}")
     UNEXPECTED_ERROR = (500, "Unexpected server error: {}")
+    UNAUTHORIZED = (401, "Unauthorized")
+    SERVICE_UNAVAILABLE = (500, "Service unavailable")
+    ALREADY_EXISTS = (409, "Nickname already taken")
+    CREATED = (201, "User created successfully")
 
     def __init__(self, code, message):
         self.code = code
