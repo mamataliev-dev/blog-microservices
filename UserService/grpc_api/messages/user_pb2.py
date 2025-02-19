@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nuser.proto\x12\x04user\"\x96\x01\n\x04User\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\r\n\x05\x61\x62out\x18\x03 \x01(\t\x12\x10\n\x08nickname\x18\x04 \x01(\t\x12\x11\n\tfollowers\x18\x05 \x01(\x05\x12\x11\n\tfollowing\x18\x06 \x01(\x05\x12\x14\n\x0cmember_since\x18\x07 \x01(\t\x12\x17\n\x0fprofile_img_url\x18\x08 \x01(\t\"\"\n\x0eGetUserRequest\x12\x10\n\x08nickname\x18\x01 \x01(\t\"+\n\x0fGetUserResponse\x12\x18\n\x04user\x18\x01 \x01(\x0b\x32\n.user.User\"\x1b\n\x19GetCollectionUsersRequest\"7\n\x1aGetCollectionUsersResponse\x12\x19\n\x05users\x18\x01 \x03(\x0b\x32\n.user.User\"[\n\x11\x43reateUserRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x61\x62out\x18\x02 \x01(\t\x12\x10\n\x08nickname\x18\x03 \x01(\t\x12\x17\n\x0fprofile_img_url\x18\x04 \x01(\t\".\n\x12\x43reateUserResponse\x12\x18\n\x04user\x18\x01 \x01(\x0b\x32\n.user.User\"[\n\x11UpdateUserRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x61\x62out\x18\x02 \x01(\t\x12\x10\n\x08nickname\x18\x03 \x01(\t\x12\x17\n\x0fprofile_img_url\x18\x04 \x01(\t\".\n\x12UpdateUserResponse\x12\x18\n\x04user\x18\x01 \x01(\x0b\x32\n.user.User\"%\n\x11\x44\x65leteUserRequest\x12\x10\n\x08nickname\x18\x01 \x01(\t\"5\n\x12\x44\x65leteUserResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t2\xe1\x02\n\x0bUserService\x12\x36\n\x07GetUser\x12\x14.user.GetUserRequest\x1a\x15.user.GetUserResponse\x12W\n\x12GetCollectionUsers\x12\x1f.user.GetCollectionUsersRequest\x1a .user.GetCollectionUsersResponse\x12?\n\nCreateUser\x12\x17.user.CreateUserRequest\x1a\x18.user.CreateUserResponse\x12?\n\nUpdateUser\x12\x17.user.UpdateUserRequest\x1a\x18.user.UpdateUserResponse\x12?\n\nDeleteUser\x12\x17.user.DeleteUserRequest\x1a\x18.user.DeleteUserResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nuser.proto\x12\x04user\"\x96\x01\n\x04User\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\r\n\x05\x61\x62out\x18\x03 \x01(\t\x12\x10\n\x08nickname\x18\x04 \x01(\t\x12\x11\n\tfollowers\x18\x05 \x01(\x05\x12\x11\n\tfollowing\x18\x06 \x01(\x05\x12\x14\n\x0cmember_since\x18\x07 \x01(\t\x12\x17\n\x0fprofile_img_url\x18\x08 \x01(\t\"\"\n\x0eGetUserRequest\x12\x10\n\x08nickname\x18\x01 \x01(\t\"+\n\x0fGetUserResponse\x12\x18\n\x04user\x18\x01 \x01(\x0b\x32\n.user.User\"\x1b\n\x19GetCollectionUsersRequest\"7\n\x1aGetCollectionUsersResponse\x12\x19\n\x05users\x18\x01 \x03(\x0b\x32\n.user.User\"[\n\x11\x43reateUserRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x61\x62out\x18\x02 \x01(\t\x12\x10\n\x08nickname\x18\x03 \x01(\t\x12\x17\n\x0fprofile_img_url\x18\x04 \x01(\t\".\n\x12\x43reateUserResponse\x12\x18\n\x04user\x18\x01 \x01(\x0b\x32\n.user.User\"g\n\x11UpdateUserRequest\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\r\n\x05\x61\x62out\x18\x03 \x01(\t\x12\x10\n\x08nickname\x18\x04 \x01(\t\x12\x17\n\x0fprofile_img_url\x18\x05 \x01(\t\".\n\x12UpdateUserResponse\x12\x18\n\x04user\x18\x01 \x01(\x0b\x32\n.user.User\"%\n\x11\x44\x65leteUserRequest\x12\x10\n\x08nickname\x18\x01 \x01(\t\"5\n\x12\x44\x65leteUserResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t2\xe1\x02\n\x0bUserService\x12\x36\n\x07GetUser\x12\x14.user.GetUserRequest\x1a\x15.user.GetUserResponse\x12W\n\x12GetCollectionUsers\x12\x1f.user.GetCollectionUsersRequest\x1a .user.GetCollectionUsersResponse\x12?\n\nCreateUser\x12\x17.user.CreateUserRequest\x1a\x18.user.CreateUserResponse\x12?\n\nUpdateUser\x12\x17.user.UpdateUserRequest\x1a\x18.user.UpdateUserResponse\x12?\n\nDeleteUser\x12\x17.user.DeleteUserRequest\x1a\x18.user.DeleteUserResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -46,13 +46,13 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_CREATEUSERRESPONSE']._serialized_start=433
   _globals['_CREATEUSERRESPONSE']._serialized_end=479
   _globals['_UPDATEUSERREQUEST']._serialized_start=481
-  _globals['_UPDATEUSERREQUEST']._serialized_end=572
-  _globals['_UPDATEUSERRESPONSE']._serialized_start=574
-  _globals['_UPDATEUSERRESPONSE']._serialized_end=620
-  _globals['_DELETEUSERREQUEST']._serialized_start=622
-  _globals['_DELETEUSERREQUEST']._serialized_end=659
-  _globals['_DELETEUSERRESPONSE']._serialized_start=661
-  _globals['_DELETEUSERRESPONSE']._serialized_end=714
-  _globals['_USERSERVICE']._serialized_start=717
-  _globals['_USERSERVICE']._serialized_end=1070
+  _globals['_UPDATEUSERREQUEST']._serialized_end=584
+  _globals['_UPDATEUSERRESPONSE']._serialized_start=586
+  _globals['_UPDATEUSERRESPONSE']._serialized_end=632
+  _globals['_DELETEUSERREQUEST']._serialized_start=634
+  _globals['_DELETEUSERREQUEST']._serialized_end=671
+  _globals['_DELETEUSERRESPONSE']._serialized_start=673
+  _globals['_DELETEUSERRESPONSE']._serialized_end=726
+  _globals['_USERSERVICE']._serialized_start=729
+  _globals['_USERSERVICE']._serialized_end=1082
 # @@protoc_insertion_point(module_scope)
