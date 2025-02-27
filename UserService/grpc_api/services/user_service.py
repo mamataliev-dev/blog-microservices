@@ -1,12 +1,16 @@
 from datetime import datetime
 
+from sqlalchemy import Executable
+
 from app.models import User
 from app.extensions import db
 from errors import GrpcError
 from grpc_api.messages import user_pb2, user_pb2_grpc
 from app import create_app
 
+from werkzeug.security import generate_password_hash
 from sqlalchemy.exc import SQLAlchemyError
+from flask_jwt_extended import create_access_token, get_jwt_identity
 
 app = create_app()
 
@@ -68,6 +72,8 @@ class UserService(user_pb2_grpc.UserServiceServicer):
         user = self._find_user_by_nickname(request.nickname, context)
 
         if not user:
+            context.set_code(GrpcError.NOT_FOUND.code)
+            context.set_details("User not found.")
             return user_pb2.GetUserResponse()
 
         return self._build_user_response(user, user_pb2.GetUserResponse)
@@ -95,7 +101,7 @@ class UserService(user_pb2_grpc.UserServiceServicer):
 
     def UpdateUser(self, request, context):
         """
-        Updates a specific user by nickname.
+        Updates existing user by ID.
 
         Args:
             request: The gRPC request containing the user's new data.
@@ -114,7 +120,7 @@ class UserService(user_pb2_grpc.UserServiceServicer):
         """
         try:
             with app.app_context():
-                user = User.query.filter_by(id=request.id).first()
+                user = self._fetch_user_by_id(request.id)
 
                 if not user:
                     return user_pb2.UpdateUserResponse()
@@ -187,9 +193,37 @@ class UserService(user_pb2_grpc.UserServiceServicer):
         user = self._find_user_by_nickname(request.nickname, context)
 
         if not user:
+            context.set_code(GrpcError.NOT_FOUND.code)
+            context.set_details("User not found.")
             return user_pb2.DeleteUserResponse(status="FAILED", message="User not found")
 
         return self._delete_user_by_nickname(user, context)
+
+    def LoginUser(self, request, context):
+        """
+        Handles user login requests.
+
+        Args:
+            request (LoginUserRequest): The gRPC request containing `nickname` and `password`.
+            context (grpc.ServicerContext): The gRPC context for handling metadata and status codes.
+
+        Returns:
+            LoginUserResponse: Response containing the JWT access token if successful.
+        """
+        try:
+            user = self._find_user_by_nickname(request.nickname, context)
+
+            if not user:
+                context.set_code(GrpcError.NOT_FOUND.code)
+                context.set_details("User not found.")
+                return user_pb2.LoginUserResponse()
+
+            return self._login_user_to_system(user, request, context)
+
+        except Exception as e:
+            context.set_code(GrpcError.INTERNAL)
+            context.set_details(GrpcError.INTERNAL.format_message(str(e)))
+            return user_pb2.LoginUserResponse()
 
     def _find_user_by_nickname(self, nickname, context):
         """
@@ -251,6 +285,9 @@ class UserService(user_pb2_grpc.UserServiceServicer):
         with app.app_context():
             return User.query.all()
 
+    def _fetch_user_by_id(self, user_id):
+        return User.query.filter_by(id=user_id).first()
+
     def _create_user_in_db(self, request, context):
         """
         Creates a new user in the database.
@@ -297,7 +334,8 @@ class UserService(user_pb2_grpc.UserServiceServicer):
                 if not self._check_for_existing_nickname(new_user_data["nickname"], context):
                     return None
 
-                new_user = self._create_user_instance(new_user_data)
+                hashed_password = self._hash_password(new_user_data["password"])
+                new_user = self._create_user_instance(new_user_data, hashed_password)
 
                 db.session.add(new_user)
                 if not self._commit_session(context):
@@ -314,7 +352,7 @@ class UserService(user_pb2_grpc.UserServiceServicer):
 
     def _update_user_by_id(self, user, request, context):
         """
-        Updates a user by nickname in the database.
+        Updates a user by ID in the database.
 
         Args:
             user: The user object to update.
@@ -323,16 +361,25 @@ class UserService(user_pb2_grpc.UserServiceServicer):
 
         Returns:
             User: The updated user's data.
+            None:
+                - Given nickname already existing.
+                - If current password does not math with hashed password.
 
         Raises:
             DatabaseError: If a database error occurs.
         """
         try:
-
             if not self._check_for_existing_nickname(request.nickname, context):
                 return None
 
-            updated_data = self._update_user_instance(user, request)
+            new_hashed_password = self._check_valid_current_password_and_new_password(
+                user, request.current_password, request.new_password, context
+            )
+
+            if not new_hashed_password:
+                return None
+
+            updated_data = self._update_user_instance(user, request, new_hashed_password)
 
             for key, value in updated_data.items():
                 setattr(user, key, value)
@@ -461,7 +508,7 @@ class UserService(user_pb2_grpc.UserServiceServicer):
                 - `grpc.StatusCode.INVALID_ARGUMENT`: If any required field is missing or empty.
         """
         try:
-            required_fields = ["nickname", "name"]
+            required_fields = ["nickname", "name", "password"]
             missing_fields = [field for field in required_fields if not data.get(field)]
 
             if missing_fields:
@@ -529,12 +576,13 @@ class UserService(user_pb2_grpc.UserServiceServicer):
 
         return new_user_data
 
-    def _create_user_instance(self, user_data):
+    def _create_user_instance(self, user_data, hashed_password):
         """
         Creates a new User instance from a dictionary of user data.
 
         Args:
             user_data (dict): The dictionary containing user attributes.
+            hashed_password (str): The hashed password.
 
         Returns:
             User: A new User instance.
@@ -543,16 +591,18 @@ class UserService(user_pb2_grpc.UserServiceServicer):
             name=user_data.get("name", ""),
             about=user_data.get("about", ""),
             nickname=user_data.get("nickname", ""),
+            password=hashed_password,
             profile_img_url=user_data.get("profile_img_url", ""),
         )
 
-    def _update_user_instance(self, user, request):
+    def _update_user_instance(self, user, request, new_hashed_password):
         """
         Creates a new User instance from a dictionary of user data.
 
         Args:
-            user: Current user data.
+            user (dict): Current user data.
             request: The gRPC request containing the user new data.
+            new_hashed_password (str): New password if it has been changed.
 
         Returns:
             dict: Converted user data to dictionary.
@@ -561,5 +611,129 @@ class UserService(user_pb2_grpc.UserServiceServicer):
             "name": request.name if request.name else user.name,
             "about": request.about if request.about else user.about,
             "nickname": request.nickname if request.nickname else user.nickname,
+            "password": new_hashed_password if new_hashed_password else user.password,
             "profile_img_url": request.profile_img_url if request.profile_img_url else user.profile_img_url,
         }
+
+    def _check_valid_current_password_and_new_password(self, user, current_password, new_password, context):
+        """
+        Validates the current password and hashes the new password if valid.
+
+        Args:
+            user (User): The user object.
+            current_password (str): The current password provided by the user.
+            new_password (str): The new password provided by the user.
+            context: The gRPC context for handling metadata and status codes.
+
+        Returns:
+            str: The new hashed password if valid, otherwise the existing password.
+            None: If the current password is incorrect.
+        """
+        if current_password and new_password:
+            if not self._check_password(user, current_password, context):
+                return None
+            return self._hash_password(new_password)
+
+        return user.password
+
+    def _login_user_to_system(self, user, request, context):
+        """
+        Authenticates the user and generates an access token.
+
+        Args:
+            user (dict): User record retrieved from the database.
+            request (LoginUserRequest): The gRPC request containing `nickname` and `password`.
+            context (grpc.ServicerContext): The gRPC context for handling metadata and status codes.
+
+        Returns:
+            LoginUserResponse: Response containing the JWT access token if authentication is successful.
+        """
+        try:
+            if not self._check_for_existing_nickname(request.nickname, context):
+                return user_pb2.LoginUserResponse()
+
+            validated = self._validate_login_data(request.nickname, request.password, context)
+            if not validated:
+                return user_pb2.LoginUserResponse()
+            nickname, password = validated
+
+            if not self._check_password(user, password, context):
+                return user_pb2.LoginUserResponse()
+
+            return user_pb2.LoginUserResponse()
+
+        except Exception as e:
+            context.set_code(GrpcError.INTERNAL.code)
+            context.set_details(GrpcError.INTERNAL.format_message(str(e)))
+            db.session.rollback()
+            return user_pb2.LoginUserResponse()
+
+    def _validate_login_data(self, nickname, password, context):
+        """
+        Validates login data and ensures both nickname and password are provided.
+
+        Args:
+            nickname (str): The user's nickname.
+            password (str): The user's password.
+            context (grpc.ServicerContext): The gRPC context used to set error codes and details.
+
+        Returns:
+            tuple: (nickname, password) if valid, otherwise None.
+
+        Raises:
+            GrpcError.INVALID_ARGUMENT: If nickname or password is missing.
+        """
+        try:
+            if not nickname or not password:
+                missing_fields = []
+                if not nickname:
+                    missing_fields.append("nickname")
+                if not password:
+                    missing_fields.append("password")
+
+                error_message = f"Missing required fields: {', '.join(missing_fields)}."
+                context.set_code(GrpcError.INVALID_ARGUMENT.code)
+                context.set_details(GrpcError.INVALID_ARGUMENT.format_message(error_message))
+                return None
+
+            return nickname, password
+        except Exception as e:
+            context.set_code(GrpcError.INVALID_ARGUMENT.code)
+            context.set_details(GrpcError.INVALID_ARGUMENT.format_message(str(e)))
+            return None
+
+    def _hash_password(self, password):
+        """
+        Hashes the given password.
+
+        Args:
+            password (str): The raw password.
+
+        Returns:
+            str: The hashed password.
+        """
+        return generate_password_hash(password)
+
+    def _check_password(self, user, current_password, context):
+        """
+        Checks whether the given password matches the hashed password.
+
+        Args:
+            current_password (str): User's current password.
+            user (dict): User's current data.
+            context: The gRPC context for handling metadata and status codes.
+
+        Returns:
+            bool: True if the password matches the hashed password, otherwise False.
+            None: If password does not match with the hashed password.
+
+        Raises:
+            grpc.RpcError:
+                `grpc.StatusCode.INVALID_ARGUMENT`: If the given password does not match the hashed password.
+        """
+        if not user.check_password(current_password):
+            context.set_code(GrpcError.INVALID_ARGUMENT.code)
+            context.set_details(GrpcError.INVALID_ARGUMENT.format_message("Invalid password. Please try again."))
+            return False
+
+        return user.check_password(current_password)

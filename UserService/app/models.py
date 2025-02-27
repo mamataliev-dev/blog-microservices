@@ -2,6 +2,8 @@ from datetime import datetime
 
 from app.extensions import db
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 class Follower(db.Model):
     """
@@ -42,12 +44,19 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     nickname = db.Column(db.String(50), nullable=False, unique=True)
     about = db.Column(db.Text, nullable=True)
-    # TODO: Add default url image to profile_img_url
-    profile_img_url = db.Column(db.Text,
-                                default="https://media.istockphoto.com/id/1300845620/vector/user-icon-flat-isolated-on-white-background-user-symbol-vector-illustration.jpg?s=612x612&w=0&k=20&c=yBeyba0hUkh14_jgv1OKqIH0CCSWU_4ckRkAoy2p73o=")
+    profile_img_url = db.Column(db.Text, default="https://shorturl.at/xA1LB")
     member_since = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def set_password(self, raw_password):
+        """Hash the password before saving it."""
+        self.password = generate_password_hash(raw_password)
+
+    def check_password(self, raw_password):
+        """Check if the provided password matches the hashed password."""
+        return check_password_hash(self.password, raw_password)
 
     followers = db.relationship(
         "Follower",

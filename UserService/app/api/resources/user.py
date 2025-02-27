@@ -37,7 +37,7 @@ def handle_grpc_error(e):
     if grpc_code == grpc.StatusCode.NOT_FOUND:
         return {"error": HttpError.NOT_FOUND.message}, HttpError.NOT_FOUND.code
     elif grpc_code == grpc.StatusCode.INVALID_ARGUMENT:
-        return {"error": HttpError.BAD_REQUEST.message}, HttpError.BAD_REQUEST.code
+        return {"error": HttpError.BAD_REQUEST.format_message(details)}, HttpError.BAD_REQUEST.code
     elif grpc_code == grpc.StatusCode.UNAUTHENTICATED:
         return {"error": HttpError.UNAUTHORIZED.message}, HttpError.UNAUTHORIZED.code
     elif grpc_code == grpc.StatusCode.ALREADY_EXISTS:
@@ -108,7 +108,35 @@ def sanitize_nickname(nickname):
     return nickname
 
 
-class UserResource(Resource):
+def sanitize_password(password):
+    """
+    Sanitizes a given password.
+
+    Ensures the password:
+    - Has no spaces.
+    - Is at least 5 characters long.
+
+    Args:
+        password (str): The user-provided password.
+
+    Returns:
+        str: A sanitized and valid password.
+
+    Raises:
+        ValueError: If the password contains invalid characters or is too short.
+    """
+    if not isinstance(password, str) or not password.strip():
+        raise ValueError("Password cannot be empty.")
+
+    password = password.replace(" ", "")
+
+    if len(password) < 3:
+        raise ValueError("Password must be at least 5 characters long.")
+
+    return password
+
+
+class User(Resource):
     """
     Manages operations related to a specific user.
 
@@ -138,6 +166,20 @@ class UserResource(Resource):
             tuple:
                 - dict: A JSON response containing the user's data if found.
                 - int: The corresponding HTTP status code.
+
+        Response Example:
+        ```json
+        {
+            "id": "124",
+            "name": "John Smith",
+            "nickname": "john_smith",
+            "about": "Blog about John Smith"
+            "profile_img_url": "https://aws.amazon.com/s3/example.jpg"
+            "followers": 48,
+            "following": 14,
+            "member_since": "2024-02-26T10:00:00Z"
+        }
+        ```
         """
         sanitize_nickname(nickname)
         user_response = stub.GetUser(user_pb2.GetUserRequest(nickname=nickname))
@@ -186,7 +228,7 @@ class UserResource(Resource):
         }
 
 
-class UserListResource(Resource):
+class UserList(Resource):
     """
     Manages operations related to a collection of users.
 
@@ -206,7 +248,7 @@ class UserListResource(Resource):
 
     def __init__(self):
         """Initialize with an instance of UserResource to reuse its methods."""
-        self.user_resource = UserResource()
+        self.user_resource = User()
 
     @handle_exceptions
     def get(self):
@@ -215,6 +257,34 @@ class UserListResource(Resource):
 
         Returns:
             tuple: A JSON response containing the collection of users and an HTTP status code.
+
+        Response Example:
+        ```json
+        {
+            "users": [
+                {
+                    "id": "124",
+                    "name": "John Smith",
+                    "nickname": "john_smith",
+                    "about": "Blog about John Smith"
+                    "profile_img_url": "https://aws.amazon.com/s3/example.jpg"
+                    "followers": 48,
+                    "following": 14,
+                    "member_since": "2024-02-26T10:00:00Z"
+                }
+                {
+                    "id": "124",
+                    "name": "Mark",
+                    "nickname": "Mark",
+                    "about": "Blog about Mark"
+                    "profile_img_url": "https://aws.amazon.com/s3/example.jpg"
+                    "followers": 12,
+                    "following": 76,
+                    "member_since": "2024-02-26T10:00:00Z"
+                }
+            ]
+        }
+        ```
         """
         user_response = stub.GetCollectionUsers(user_pb2.GetCollectionUsersRequest())
 
@@ -222,67 +292,8 @@ class UserListResource(Resource):
 
         return {"users": users_data}, HttpError.OK.code
 
-    @handle_exceptions
-    def post(self):
-        """
-        Handles the creation of a new user.
 
-        Returns:
-            tuple: A JSON response containing the newly created user's data and an HTTP status code.
-        """
-        new_user = request.get_json()
-
-        if not new_user:
-            return {"error": "Request body cannot be empty"}, HttpError.BAD_REQUEST.code
-
-        sanitize_nickname(new_user["nickname"])
-        self._check_required_fields(new_user)
-
-        user_response = stub.CreateUser(self._create_post_user_instance(new_user))
-
-        return self.user_resource._build_user_response(user_response.user), HttpError.CREATED.code
-
-    def _check_required_fields(self, new_user):
-        """
-        Validates the presence of required fields in the given user data.
-
-        Args:
-            new_user (dict): The user's data to check.
-
-        Returns:
-            bool: True if all required fields are present and non-empty.
-
-        Raises:
-            ValueError: If any required fields are missing or empty.
-        """
-        required_fields = ["name", "nickname"]
-        missing_fields = [field for field in required_fields if not new_user.get(field)]
-
-        if missing_fields:
-            logger.error(f"Missing or empty required fields: {', '.join(missing_fields)}")
-            raise ValueError(f"Missing or empty required fields: {', '.join(missing_fields)}")
-
-        return True
-
-    def _create_post_user_instance(self, new_user):
-        """
-        Creates a new user instance.
-
-        Args:
-            new_user: Dictionary containing the new user's data.
-
-        Returns:
-            dict: The converted user instance.
-        """
-        return user_pb2.CreateUserRequest(
-            name=new_user["name"],
-            about=new_user["about"],
-            nickname=new_user["nickname"],
-            profile_img_url=new_user["profile_img_url"],
-        )
-
-
-class UserResourceById(Resource):
+class UserUpdate(Resource):
     """
     Manages operations related to a specific user.
 
@@ -298,10 +309,6 @@ class UserResourceById(Resource):
         - put(id): Updates user information.
     """
 
-    def __init__(self):
-        """Initialize with an instance of UserResource to reuse its methods."""
-        self.user_resource = UserResource()
-
     @handle_exceptions
     def put(self, user_id):
         """
@@ -312,14 +319,40 @@ class UserResourceById(Resource):
 
         Returns:
             tuple: A JSON response with the updated user's data.
+
+        Request Body Example:
+        ```json
+        {
+            "name": "Updated John Smith",
+            "nickname": "updated_john_smith",
+            "about": "Updated blog about John Smith",
+            "profile_img_url": "https://aws.amazon.com/s3/updated-example.jpg",
+            "current_password": "old_password123",
+            "new_password": "new_secure_password"
+        }
+        ```
+
+        Response Example:
+        ```json
+        {
+            {
+                "id": "124",
+                "name": "Updated John Smith",
+                "nickname": "updated_john_smith",
+                "about": "Updated blog about John Smith"
+                "profile_img_url": "https://aws.amazon.com/s3/updated-example.jpg"
+                "followers": 12,
+                "following": 76,
+                "member_since": "2024-02-26T10:00:00Z"
+            }
+        }
+        ```
         """
         new_data = request.get_json()
-        if not new_data:
-            return {"error": "Request body cannot be empty"}, HttpError.BAD_REQUEST.code
 
         user_response = stub.UpdateUser(self._update_user_instance(new_data, user_id))
 
-        return self.user_resource._build_user_response(user_response.user), HttpError.OK.code
+        return self._build_update_user_response(user_response.user), HttpError.OK.code
 
     def _update_user_instance(self, new_data, user_id):
         """
@@ -333,11 +366,35 @@ class UserResourceById(Resource):
             user_pb2.UpdateUserRequest: The gRPC request object for updating the user.
         """
         validated_nickname = sanitize_nickname(new_data["nickname"]) if "nickname" in new_data else None
+        validated_password = sanitize_password(new_data["new_password"]) if "new_password" in new_data else None
 
         return user_pb2.UpdateUserRequest(
             id=user_id,
             name=new_data.get("name", None),
             about=new_data.get("about", None),
             nickname=validated_nickname,
+            current_password=new_data.get("current_password", None),
+            new_password=validated_password,
             profile_img_url=new_data.get("profile_img_url", None),
         )
+
+    def _build_update_user_response(self, user):
+        """
+        Converts a gRPC response to a dictionary representing a user.
+
+        Args:
+            user (user_pb2 Response): A gRPC response.
+
+        Returns:
+            dict: The user's data converted to a dictionary.
+        """
+        return {
+            "id": user.id,
+            "name": user.name,
+            "nickname": user.nickname,
+            "about": user.about,
+            "profile_img_url": user.profile_img_url,
+            "followers": user.followers,
+            "following": user.following,
+            "member_since": user.member_since,
+        }
