@@ -1,7 +1,7 @@
 venv/
-migrations/
 __pycache__/
 .env
 .env.example
 *.log
 .idea/
+app.log

@@ -17,11 +17,12 @@ class GrpcError(Enum):
     """
     OK = (grpc.StatusCode.OK, "OK")
     USER_NOT_FOUND = (grpc.StatusCode.NOT_FOUND, "User not found")
-    INVALID_ARGUMENT = (grpc.StatusCode.INVALID_ARGUMENT, "Invalid request parameters")
+    INVALID_ARGUMENT = (grpc.StatusCode.INVALID_ARGUMENT, "{}")
     INTERNAL_SERVER_ERROR = (grpc.StatusCode.INTERNAL, "An internal server error occurred")
     ALREADY_EXISTS = (grpc.StatusCode.ALREADY_EXISTS, "User already exists")
     DATABASE_ERROR = (grpc.StatusCode.INTERNAL, "Database error: {}")
     INTERNAL = (grpc.StatusCode.INTERNAL, "Internal server error: {}")
+    UNAUTHENTICATED = (grpc.StatusCode.UNAUTHENTICATED, "Unauthorized")
 
     def __init__(self, code, message):
         self.code = code
@@ -29,6 +30,8 @@ class GrpcError(Enum):
 
     def format_message(self, *args):
         """Dynamically formats the error message with provided arguments."""
+        if not args:
+            return self.message
         return self.message.format(*args)
 
 
@@ -47,7 +50,7 @@ class HttpError(Enum):
     """
     OK = (200, "OK")
     NOT_FOUND = (404, "User not found")
-    BAD_REQUEST = (400, "Invalid request parameters")
+    BAD_REQUEST = (400, "Invalid request parameters: {}")
     INTERNAL_SERVER_ERROR = (500, "An internal server error occurred: {}")
     FORBIDDEN = (403, "You do not have permission to perform this action")
     CONFLICT = (409, "User already exists")
@@ -64,4 +67,6 @@ class HttpError(Enum):
 
     def format_message(self, *args):
         """Dynamically formats the error message with provided arguments."""
+        if not args:
+            return self.message
         return self.message.format(*args)
