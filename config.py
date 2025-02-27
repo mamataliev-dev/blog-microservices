@@ -3,7 +3,7 @@ from datetime import timedelta
 
 
 class Config:
-    JWT_SECRET_KEY = os.getenv('SECRET_KEY', '6bef18936ac12a9096e9fe7a8fe1f777')
+    JWT_SECRET_KEY = os.getenv('SECRET_KEY', 'YOUR_SECRET_KEY')
 
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
 
@@ -12,7 +12,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        'DATABASE_URI', 'postgresql://postgres:mamatdiordmli@localhost:5432/blog'
+        'DATABASE_URI', 'postgresql://postgres:password@localhost:porst/blog'
     )
 
 
