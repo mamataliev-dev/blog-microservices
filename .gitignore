@@ -4,3 +4,4 @@ __pycache__/
 .env.example
 *.log
 .idea/
+app.log
